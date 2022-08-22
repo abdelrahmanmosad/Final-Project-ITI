@@ -14,7 +14,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { useNavigate } from 'react-router-dom';
-import { addDoc, collection } from "firebase/firestore";
+import {doc, setDoc } from "firebase/firestore";
 
 
 
@@ -22,6 +22,9 @@ const UserContext = createContext({});
 
 export const useUserContext = () => useContext(UserContext);
 
+export const addDocByID = async (collName, ID, data) => {
+   await setDoc(doc(db, collName, ID), data);
+}
 export const UserContextProvider = ({ children }) => {
 
    const [users, setUsers] = useState(undefined);
@@ -43,16 +46,16 @@ export const UserContextProvider = ({ children }) => {
       return unsubscribe;
    }, []);
 
-   const registerUser = (email, password, name) => {
+   
 
+   const registerUser = async(email, password, name) => {
       setLoading(true);
       createUserWithEmailAndPassword(auth, email, password)
          .then((credentials) => {
             console.log(credentials);
             console.log(auth.currentUser.uid);
             const user = credentials.user
-
-            addDoc(collection(db, 'Users'), {
+            const data = {
                uid: user.uid,
                Name: name,
                Email: email,
@@ -60,14 +63,16 @@ export const UserContextProvider = ({ children }) => {
                Orders: [],
                Favs: [],
                mobile: "",
-            }).then(async () => {
-               await updateProfile(auth.currentUser, {
-                  ...users,
-                  displayName: name,
-                  phoneNumber: '02',
-               });
-               navigate('/home');
-            }).catch(error => setError(error.message))
+            }
+                addDocByID('Users', user.uid, data)
+               .then(async () => {
+                  await updateProfile(auth.currentUser, {
+                     ...users,
+                     displayName: name,
+                     phoneNumber: '02',
+                  });
+                  navigate('/home');
+               }).catch(error => setError(error.message))
                .finally(() => setLoading(false));
          }).catch((error) => {
             setError(error.message)
@@ -101,7 +106,11 @@ export const UserContextProvider = ({ children }) => {
    };
 
    const updatecurrentProfile = async (name, phone) => {
-
+      await setDoc(doc(db, "Users", auth.currentUser.uid), {
+         Name: name ,
+         mobile: phone,  
+      }, { merge: true });
+     
       updateProfile(auth.currentUser, {
          ...users,
          displayName: name,
