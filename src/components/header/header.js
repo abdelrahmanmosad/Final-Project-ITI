@@ -8,10 +8,10 @@ import { useUserContext } from "../../context/userContext";
 
 const Header = () => {
 
-    const { logoutUser, users } = useUserContext();
+    const { logoutUser, users, userInfo } = useUserContext();
     useEffect(() => {
-        console.log(users);
-    }, [users])
+        console.log(userInfo);
+    }, [userInfo, users]);
     return (
         <>
             {/* Topnav */}

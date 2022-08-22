@@ -14,7 +14,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { useNavigate } from 'react-router-dom';
-import {doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 
 
@@ -30,6 +30,8 @@ export const UserContextProvider = ({ children }) => {
    const [users, setUsers] = useState(undefined);
    const [loading, setLoading] = useState(false);
    const [errors, setError] = useState("");
+   const [userInfo, setUserInfo] = useState({});
+
    const navigate = useNavigate();
 
    useEffect(() => {
@@ -46,9 +48,9 @@ export const UserContextProvider = ({ children }) => {
       return unsubscribe;
    }, []);
 
-   
 
-   const registerUser = async(email, password, name) => {
+
+   const registerUser = async (email, password, name) => {
       setLoading(true);
       createUserWithEmailAndPassword(auth, email, password)
          .then((credentials) => {
@@ -64,7 +66,7 @@ export const UserContextProvider = ({ children }) => {
                Favs: [],
                mobile: "",
             }
-                addDocByID('Users', user.uid, data)
+            addDocByID('Users', user.uid, data)
                .then(async () => {
                   await updateProfile(auth.currentUser, {
                      ...users,
@@ -80,9 +82,19 @@ export const UserContextProvider = ({ children }) => {
    };
 
    const signInUser = async (email, password) => {
+
       setLoading(true);
+
+
       await signInWithEmailAndPassword(auth, email, password)
-         .then((res) => console.log(res.user))
+         .then(async (res) => {
+            console.log(res.user);
+            await getDoc(doc(db, "Users", auth.currentUser.uid)).then(res => {
+               console.log(res.data());
+               setUserInfo(res.data());
+
+            });
+         })
          .catch((err) => setError(err.code))
          .finally(() => setLoading(false));
    };
@@ -91,7 +103,9 @@ export const UserContextProvider = ({ children }) => {
       setLoading(true);
       setError("");
       signInWithPopup(auth, new GoogleAuthProvider())
-         .then((res) => console.log(res))
+         .then((res) => {
+            console.log(res)
+         })
          .catch((err) => setError(err.code))
          .finally(() => setLoading(false));
    };
@@ -106,25 +120,36 @@ export const UserContextProvider = ({ children }) => {
    };
 
    const updatecurrentProfile = async (name, phone) => {
-      await setDoc(doc(db, "Users", auth.currentUser.uid), {
-         Name: name ,
-         mobile: phone,  
-      }, { merge: true });
-     
+
       updateProfile(auth.currentUser, {
          ...users,
          displayName: name,
          phoneNumber: phone,
-      }).then(console.log(users.displayName))
+      }).then(async (res) => {
+
+         await setDoc(doc(db, "Users", auth.currentUser.uid), {
+            Name: name,
+            mobile: phone,
+         }, { merge: true });
+         await getDoc(doc(db, "Users", auth.currentUser.uid)).then(res => {
+            console.log(res.data());
+            setUserInfo(res.data());
+
+         });
+      })
          .catch((err) => setError(err.code));
    };
+
    const changePassword = async (oldPass, newPass) => {
       const user = auth.currentUser;
       const cred = EmailAuthProvider.credential(user.email, oldPass);
       try {
          await reauthenticateWithCredential(user, cred)
-         await updatePassword(auth.currentUser, newPass).then(() => {
+         await updatePassword(auth.currentUser, newPass).then(async () => {
             console.log(user);
+            await setDoc(doc(db, "Users", auth.currentUser.uid), {
+               Password: newPass,
+            }, { merge: true });
             setError();
          }).catch((error) => {
             console.log(error.message);
@@ -155,6 +180,7 @@ export const UserContextProvider = ({ children }) => {
       loading,
       errors,
       UserContext,
+      userInfo,
       setUsers,
       signInUser,
       registerUser,
