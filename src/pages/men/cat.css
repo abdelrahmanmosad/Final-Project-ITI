@@ -1,0 +1,20 @@
+
+  
+  .img-hover-zoom  {
+    transition: transform .5s ease;
+  }
+  
+  .img-hover-zoom:hover {
+    transform: scale(1.2);
+  }
+
+  .btnHover:hover{
+    opacity: 0.8;
+  }
+
+  /* .img-hover:hover{
+    b
+  } */
+
+  /* .title-hover{
+  } */
